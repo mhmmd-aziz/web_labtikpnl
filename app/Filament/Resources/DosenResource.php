@@ -9,38 +9,58 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
 
 class DosenResource extends Resource
 {
     protected static ?string $model = Dosen::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-briefcase'; // Ganti ikon jika perlu
+    protected static ?string $navigationIcon = 'heroicon-o-briefcase'; 
     protected static ?string $navigationGroup = 'Manajemen Data';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Select::make('user_id')
-                    ->relationship('user', 'name')
-                    ->label('User (Nama Dosen)')
-                    ->searchable()
-                    ->preload()
-                    ->required(),
-                TextInput::make('nidn') // <-- Pastikan ini 'nidn'
-                    ->label('NIP / NIDN')
-                    ->required()
-                    ->unique(ignoreRecord: true)
-                    ->maxLength(20),
-                Select::make('prodi_id')
-                    ->relationship('prodi', 'nama')
-                    ->label('Prodi')
-                    ->searchable()
-                    ->preload()
-                    ->required(),
+                Forms\Components\Section::make('Akun User (Login)')
+                    ->schema([
+                        Forms\Components\TextInput::make('user.name')
+                            ->label('Nama Lengkap Dosen')
+                            ->required()
+                            ->maxLength(255),
+
+                        Forms\Components\TextInput::make('user.email')
+                            ->label('Email')
+                            ->email()
+                            ->required()
+                            ->maxLength(255)
+                            ->unique('users', 'email', ignoreRecord: true),
+
+                        Forms\Components\TextInput::make('user.password')
+                            ->label('Password')
+                            ->password()
+                            ->maxLength(255)
+                            ->dehydrateStateUsing(fn ($state) => filled($state) ? bcrypt($state) : null)
+                            ->dehydrated(fn ($state) => filled($state))
+                            ->required(fn (string $context): bool => $context === 'create'),
+                    ])
+                    ->columns(2),
+
+                Forms\Components\Section::make('Data Akademik Dosen')
+                    ->schema([
+                        Forms\Components\TextInput::make('nidn') 
+                            ->label('NIP / NIDN')
+                            ->required()
+                            ->unique('dosens', 'nidn', ignoreRecord: true)
+                            ->maxLength(20),
+                            
+                        Forms\Components\Select::make('prodi_id')
+                            ->relationship('prodi', 'nama')
+                            ->label('Prodi (Opsional)') // <-- Ditambahkan keterangan opsional
+                            ->searchable()
+                            ->preload(), // <-- Dihapus ->required() nya disini
+                    ])
+                    ->columns(2),
             ]);
     }
 
@@ -48,26 +68,21 @@ class DosenResource extends Resource
     {
         return $table
             ->columns([
-                // Kolom ini mengambil 'name' dari relasi 'user'
                 TextColumn::make('user.name') 
                     ->label('Nama Dosen')
                     ->searchable()
                     ->sortable(),
                 
-                // --- INI PERBAIKANNYA ---
-                // Pastikan Anda memanggil 'nidn', sesuai nama kolom di database
                 TextColumn::make('nidn') 
                     ->label('NIP / NIDN')
                     ->searchable(),
-                // --------------------------
 
-                // Kolom ini mengambil 'nama' dari relasi 'prodi'
                 TextColumn::make('prodi.nama')
                     ->label('Prodi')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->placeholder('-'), // Menampilkan strip '-' jika tidak ada prodi
 
-                // Kolom ini mengambil 'email' dari relasi 'user'
                 TextColumn::make('user.email')
                     ->label('Email')
                     ->searchable(),

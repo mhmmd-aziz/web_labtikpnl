@@ -3,10 +3,9 @@
 namespace App\Filament\Resources\DosenResource\Pages;
 
 use App\Filament\Resources\DosenResource;
-use App\Models\User; // <-- TAMBAHKAN
+use App\Models\User;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Hash; // <-- TAMBAHKAN
 
 class CreateDosen extends CreateRecord
 {
@@ -14,23 +13,23 @@ class CreateDosen extends CreateRecord
 
     protected function handleRecordCreation(array $data): Model
     {
-        // 1. Buat User baru dari data form
+        // 1. Ambil data user dari array form
+        $userData = $data['user'];
+
+        // 2. Buat User baru
         $user = User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => $data['password'], // Password sudah di-hash oleh Form Resource
-            'role' => 'dosen', // <-- INI LOGIKA INTINYA
+            'name' => $userData['name'],
+            'email' => $userData['email'],
+            'password' => $userData['password'], 
+            'role' => 'dosen', 
         ]);
 
-        // 2. Siapkan data Dosen
-        $dosenData = [
+        // 3. Buat record Dosen, hubungkan dengan user_id yang baru dibuat
+        return static::getModel()::create([
+            'user_id' => $user->id,
             'nidn' => $data['nidn'],
-            'prodi_id' => $data['prodi_id'],
-            // ... (tambahkan field dosen lain jika ada di form) ...
-            'user_id' => $user->id, // <-- Hubungkan ke User yang baru dibuat
-        ];
-
-        // 3. Buat record Dosen
-        return static::getModel()::create($dosenData);
+            // Jika form prodi tidak diisi, masukkan null
+            'prodi_id' => $data['prodi_id'] ?? null, 
+        ]);
     }
 }
